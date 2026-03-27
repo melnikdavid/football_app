@@ -74,8 +74,8 @@ services:
 
   worker:
     build:
-      context: ./worker
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: ../worker/Dockerfile
     container_name: moadon_worker
     restart: unless-stopped
     env_file: .env

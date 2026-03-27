@@ -1,0 +1,36 @@
+version: "3.9"
+
+# Local development override — no Traefik, direct port exposure
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+
+services:
+  api:
+    ports:
+      - "8000:8000"
+    networks:
+      - moadon_internal
+      - traefik_proxy
+    labels: []          # disable Traefik labels locally
+
+  frontend:
+    ports:
+      - "3000:3000"
+    networks:
+      - moadon_internal
+      - traefik_proxy
+    labels: []
+
+  db:
+    ports:
+      - "5432:5432"    # expose for local DB clients (TablePlus, DBeaver, etc.)
+
+  redis:
+    ports:
+      - "6379:6379"    # expose for local inspection
+
+  nginx:
+    labels: []
+
+networks:
+  traefik_proxy:
+    external: false    # create locally, not shared with Traefik
