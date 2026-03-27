@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: moadon_api
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - media_uploads:/app/media
+    networks:
+      - moadon_internal
+      - traefik_proxy
+    depends_on:
+      - db
+      - redis
+    mem_limit: 512m
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.moadon-api.rule=Host(`moadon-hasportaim.co.il`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.moadon-api.entrypoints=websecure"
+      - "traefik.http.routers.moadon-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.moadon-api.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.moadon-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.moadon-api.middlewares=moadon-api-strip"
+      - "traefik.docker.network=traefik_proxy"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: moadon_frontend
+    restart: unless-stopped
+    networks:
+      - moadon_internal
+      - traefik_proxy
+    mem_limit: 256m
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.moadon-frontend.rule=Host(`moadon-hasportaim.co.il`)"
+      - "traefik.http.routers.moadon-frontend.entrypoints=websecure"
+      - "traefik.http.routers.moadon-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.moadon-frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik_proxy"
+
+  db:
+    image: postgres:16-alpine
+    container_name: moadon_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moadon_internal
+    mem_limit: 512m
+    # DB is NEVER exposed externally — internal network only
+
+  redis:
+    image: redis:7-alpine
+    container_name: moadon_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - moadon_internal
+    mem_limit: 256m
+    # Redis is NEVER exposed externally — internal network only
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: moadon_worker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - media_uploads:/app/media
+    networks:
+      - moadon_internal
+    depends_on:
+      - db
+      - redis
+    mem_limit: 384m
+
+  nginx:
+    image: nginx:alpine
+    container_name: moadon_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media_uploads:/app/media:ro
+    networks:
+      - moadon_internal
+      - traefik_proxy
+    mem_limit: 128m
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_uploads:
+
+networks:
+  moadon_internal:
+    driver: bridge
+  traefik_proxy:
+    external: true
+    name: traefik_proxy

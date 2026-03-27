@@ -1,0 +1,31 @@
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  direction: rtl;
+  font-family: "Heebo", Arial, sans-serif;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* RTL-aware utilities */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
+}
